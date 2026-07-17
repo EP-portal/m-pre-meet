@@ -155,6 +155,9 @@ body[data-th="dark"] .foot a:hover{color:#fff} body:not([data-th="dark"]) .foot 
 .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
 .qnum{font-size:11.5px;letter-spacing:.22em;font-weight:700;color:var(--sky);text-transform:uppercase}
 .qskip{font-size:12.5px;color:var(--mut);cursor:pointer;background:none;border:none}
+.reqbadge{display:inline-block;background:var(--yellow);color:var(--navy);border-radius:999px;padding:3px 11px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-left:10px;vertical-align:1px}
+.missrow.req{border-color:var(--yellow);background:var(--tyellow)}
+.missrow.req .go{color:#8a6d00}
 .qskip:hover{color:var(--navy)}
 .svcard h3{font-size:clamp(19px,2.3vw,24px);line-height:1.25;margin-bottom:7px}
 .qwhy{font-size:13px;color:var(--mut);line-height:1.55;margin-bottom:22px}
@@ -176,7 +179,11 @@ body[data-th="dark"] .foot a:hover{color:#fff} body:not([data-th="dark"]) .foot 
 .editnum:hover{border-bottom-style:solid}
 .numin{width:110px;border:1.5px solid var(--sky);border-radius:8px;padding:3px 8px;font-family:'Inter';font-weight:700;font-size:14px;color:var(--navy);outline:none}
 .edithint{margin:-8px 0 16px;font-size:12px;color:var(--sky);font-weight:600}
-input[type=range]{width:100%;accent-color:var(--sky);height:24px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:#E4E9F4}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--sky);border:3px solid #fff;box-shadow:0 2px 8px rgba(3,167,255,.45);margin-top:-6px}
+input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:#E4E9F4}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--sky);border:3px solid #fff;box-shadow:0 2px 8px rgba(3,167,255,.45)}
 textarea.svin{min-height:96px;resize:vertical}
 .svnav{display:flex;justify-content:space-between;align-items:center;margin-top:28px}
 .svback{background:none;border:none;color:var(--mut);font-size:13.5px;font-weight:600;cursor:pointer;padding:10px 4px}
@@ -361,13 +368,13 @@ textarea.svin{min-height:96px;resize:vertical}
   <section class="slide" data-th="white">
     <div class="inner"><div class="content">
       <div class="eyebrow an" style="--d:.05s">What the session looks like</div>
-      <h2 class="an" style="--d:.12s">One hour. Three moves.</h2>
+      <h2 class="an" style="--d:.12s">Your session, in three moves.</h2>
       <div class="steps">
         <div class="step an" style="--d:.2s"><h3>The walk-through</h3><p>The full portfolio, experience-first — what each stream feels like for your attendees, exhibitors and sponsors, with proof from flagship shows.</p><span class="tag">Interactive, not a deck-read</span></div>
         <div class="step an" style="--d:.28s"><h3>Your numbers, live</h3><p>We model the opportunity against your event's real scale in the room — your exhibitor count, your audience, your stand prices. Every benchmark unlocks.</p><span class="tag">Prices unlock here 🔓</span></div>
         <div class="step an" style="--d:.36s"><h3>The tailored plan</h3><p>We flag the streams that fit your goals and stage in the cycle, and leave you with a prioritised plan to co-design.</p><span class="tag">Yours to keep</span></div>
       </div>
-      <div class="meta an" style="--d:.44s"><span>⏱ <b>45–60 minutes</b></span><span>👥 <b>Bring your commercial team</b></span><span>💬 Live Q&amp;A throughout</span></div>
+      <div class="meta an" style="--d:.44s"><span>🎯 <b>Shaped by your answers</b> on the next screen</span><span>👥 <b>Bring your commercial team</b></span><span>💬 Live Q&amp;A throughout</span></div>
       </div><div class="fadehint"></div><div class="slidenav an" style="--d:.52s">
         <button class="btn yellow" onclick="next()">Shape my session →</button>
         <button class="backlink" onclick="back()">← Back</button>
@@ -431,8 +438,14 @@ function hintCheck(sl){
   const more = ct.scrollHeight - ct.clientHeight - ct.scrollTop > 8;
   f.classList.toggle('show', more);
 }
+let warmed = false;
+function warmSheet(){
+  if(warmed) return; warmed = true;
+  try{ fetch(CFG.sheet, {method:'GET', mode:'no-cors', cache:'no-store'}); }catch(e){}
+}
 function goSlide(i){
   cur = Math.max(0, Math.min(SLIDES.length-1, i));
+  if(cur >= 4) warmSheet();
   track.style.transform = `translateX(-${cur*100}vw)`;
   slides.forEach((s,j)=>s.classList.toggle('on', j===cur));
   document.body.dataset.th = slides[cur].dataset.th==='dark' ? 'dark' : 'light';
@@ -511,7 +524,7 @@ function updPickChip(){
 }
 
 /* ================= survey ================= */
-const A = { name:'', org:'', role:'', ex:250, at:8000, days:3,
+const A = { name:'', org:'', role:'', ex:null, at:null, days:null,
             today:new Set(), share:'', goals:new Set(), pains:new Set(),
             model:'', stage:'', win:'' };
 let step = 0, submitted = false, sending = false;
@@ -530,17 +543,17 @@ const STEPS = [
     <div><label class="svlbl">Your name</label><input class="svin" value="${esc(A.name)}" placeholder="Jane Doe" oninput="A.name=this.value"></div>
     <div><label class="svlbl">Your role</label><input class="svin" value="${esc(A.role)}" placeholder="Commercial Director" oninput="A.role=this.value"></div>
   </div>`},
- {s:'Event size', t:'How big is your flagship event?',
-  w:'Every benchmark in the session gets scaled to your audience — a 3,000-person show and a 30,000-person show deserve different numbers.',
-  done:()=>true,
+ {s:'Event size', t:'How big is your flagship event?', required:true,
+  w:'The one answer we can’t work without — every benchmark in the session gets scaled to your audience. Slide, or tap a number to type it exactly.',
+  done:()=>A.ex!=null && A.at!=null && A.days!=null,
   html:()=>`
    <div class="edithint">✎ Tap any blue number to type an exact figure — the sliders are just for speed.</div>
-   <div class="rngrow"><div class="top"><span>Exhibitors</span><output id="oex" class="editnum" title="Click to type an exact number" onclick="editNum('ex','oex')">${fmtn(A.ex)}</output></div>
-     <input type="range" min="${Math.min(20,A.ex)}" max="${Math.max(50000,A.ex)}" step="10" value="${A.ex}" oninput="A.ex=+this.value;oex.textContent=fmtn(+this.value);meter()"></div>
-   <div class="rngrow"><div class="top"><span>Attendees</span><output id="oat" class="editnum" title="Click to type an exact number" onclick="editNum('at','oat')">${fmtn(A.at)}</output></div>
-     <input type="range" min="${Math.min(500,A.at)}" max="${Math.max(250000,A.at)}" step="500" value="${A.at}" oninput="A.at=+this.value;oat.textContent=fmtn(+this.value);meter()"></div>
-   <div class="rngrow"><div class="top"><span>Show days</span><output id="ody" class="editnum" title="Click to type an exact number" onclick="editNum('days','ody')">${A.days}</output></div>
-     <input type="range" min="1" max="${Math.max(7,A.days)}" value="${A.days}" oninput="A.days=+this.value;ody.textContent=this.value;meter()"></div>`},
+   <div class="rngrow"><div class="top"><span>Exhibitors</span><output id="oex" class="editnum" title="Click to type an exact number" onclick="editNum('ex','oex')">${A.ex==null?'—':fmtn(A.ex)}</output></div>
+     <input type="range" min="${Math.min(20,A.ex??20)}" max="${Math.max(50000,A.ex??0)}" step="10" value="${A.ex??20}" oninput="A.ex=+this.value;oex.textContent=fmtn(+this.value);meter()"></div>
+   <div class="rngrow"><div class="top"><span>Attendees</span><output id="oat" class="editnum" title="Click to type an exact number" onclick="editNum('at','oat')">${A.at==null?'—':fmtn(A.at)}</output></div>
+     <input type="range" min="${Math.min(500,A.at??500)}" max="${Math.max(250000,A.at??0)}" step="500" value="${A.at??500}" oninput="A.at=+this.value;oat.textContent=fmtn(+this.value);meter()"></div>
+   <div class="rngrow"><div class="top"><span>Show days</span><output id="ody" class="editnum" title="Click to type an exact number" onclick="editNum('days','ody')">${A.days==null?'—':A.days}</output></div>
+     <input type="range" min="1" max="${Math.max(7,A.days??1)}" value="${A.days??1}" oninput="A.days=+this.value;ody.textContent=this.value;meter()"></div>`},
  {s:'Monetised today', t:'What are you already monetising digitally?',
   w:'We\u2019ll skip the basics you\u2019ve mastered and spend the time on what\u2019s untapped. Select all that apply.',
   done:()=>A.today.size>0,
@@ -577,7 +590,7 @@ function editNum(key,outId){
  const o = document.getElementById(outId);
  if(!o || o.querySelector('input')) return;
  o.classList.remove('editnum'); o.onclick = null;
- o.innerHTML = `<input type="number" class="numin" min="1" value="${A[key]}">`;
+ o.innerHTML = `<input type="number" class="numin" min="1" value="${A[key]??''}" placeholder="e.g. 300">`;
  const inp = o.querySelector('input');
  let settled = false;
  const finishEdit = (save)=>{
@@ -615,19 +628,25 @@ function qnext(){
 function qback(){ if(step>0){ step--; render(); } }
 function qgoto(i){ reviewing = false; step = i; render(); }
 function renderReview(miss){
+ const req = miss.filter(m=>m.s.required), rec = miss.filter(m=>!m.s.required);
+ const head = req.length ? 'One required answer is missing.' : 'A few answers are still blank.';
+ const why = req.length
+   ? 'We can’t scale the session without your event size — it takes ten seconds. The rest below is optional, but the fuller the picture, the sharper your session.'
+   : 'You can absolutely send as is — but the more complete the picture, the more precisely we can tailor your session. Our recommendation: a 30-second top-up below.';
  document.getElementById('svcard').innerHTML = `
   <div class="qhead"><span class="qnum">One last check</span></div>
-  <h3>A few answers are still blank.</h3>
-  <p class="qwhy">You can absolutely send as is — but the more complete the picture, the more precisely we can tailor your session. Our recommendation: a 30-second top-up below.</p>
+  <h3>${head}</h3>
+  <p class="qwhy">${why}</p>
   <div class="misslist">
-   ${miss.map(m => `<button class="missrow" onclick="qgoto(${m.i})"><span>Q${m.i+1} · ${m.s.s}</span><span class="go">Answer →</span></button>`).join('')}
+   ${req.map(m => `<button class="missrow req" onclick="qgoto(${m.i})"><span>Q${m.i+1} · ${m.s.s}</span><span class="go">Required →</span></button>`).join('')}
+   ${rec.map(m => `<button class="missrow" onclick="qgoto(${m.i})"><span>Q${m.i+1} · ${m.s.s}</span><span class="go">Answer →</span></button>`).join('')}
   </div>
   <div class="svnav">
     <button class="svback" onclick="qgoto(${miss[0].i})">← Back to the questions</button>
     <div></div>
     <span style="display:flex;gap:10px">
-      <button class="btn ghost" onclick="reviewing=false;finish()" style="padding:12px 22px">Send as is</button>
-      <button class="btn yellow" onclick="qgoto(${miss[0].i})" style="padding:12px 22px">Complete the answers →</button>
+      ${req.length ? '' : `<button class="btn ghost" onclick="reviewing=false;finish()" style="padding:12px 22px">Send as is</button>`}
+      <button class="btn yellow" onclick="qgoto(${miss[0].i})" style="padding:12px 22px">${req.length?'Answer the required question →':'Complete the answers →'}</button>
     </span>
   </div>`;
 }
@@ -638,8 +657,8 @@ function render(){
  const s = STEPS[step];
  const last = step===STEPS.length-1;
  document.getElementById('svcard').innerHTML = `
-  <div class="qhead"><span class="qnum">Question ${step+1} of ${STEPS.length}</span>
-    <button class="qskip" onclick="qnext()">${last?'':'Skip →'}</button></div>
+  <div class="qhead"><span class="qnum">Question ${step+1} of ${STEPS.length}${s.required?'<span class="reqbadge">Required</span>':''}</span>
+    <button class="qskip" onclick="qnext()">${(last||s.required)?'':'Skip →'}</button></div>
   <h3>${s.t}</h3><p class="qwhy">${s.w}</p>
   ${s.html()}
   <div class="svnav">
@@ -647,7 +666,7 @@ function render(){
     <div class="dots">${STEPS.map((x,i)=>{
       const answered = x.optional ? (x.s==='Your win (optional)' ? A.win.trim()!=='' : x.done()) : x.done();
       const cls = i===step ? 'cur' : (answered ? 'ok' : '');
-      const state = answered ? 'answered' : (x.optional ? 'optional' : 'not answered yet');
+      const state = answered ? 'answered' : (x.optional ? 'optional' : (x.required ? 'required — not answered yet' : 'not answered yet'));
       return `<button class="${cls}" title="Q${i+1} · ${x.s} — ${state}" onclick="qgoto(${i})">${answered&&i!==step?'✓':i+1}</button>`;
     }).join('')}</div>
     <button class="btn ${last?'yellow':'blue'}" onclick="qnext()" style="padding:12px 26px">${last?'Finish & send ✓':'Next →'}</button>
@@ -683,23 +702,30 @@ function meter(){
 }
 
 /* ---------- submission → Google Sheet ---------- */
+function sidOf(s){
+ let h = 5381;
+ for(let i=0;i<s.length;i++) h = ((h<<5)+h+s.charCodeAt(i))|0;
+ return 'la-' + (h>>>0).toString(36) + '-' + s.length.toString(36);
+}
 function payload(){
- return {
+ const p = {
   client: CFG.client, org: A.org.trim(), name: A.name.trim(), role: A.role.trim(),
-  ex: A.ex, at: A.at, days: A.days,
+  ex: A.ex ?? '', at: A.at ?? '', days: A.days ?? '',
   today: [...A.today].join('; '), share: A.share,
   goals: [...A.goals].join('; '), pains: [...A.pains].join('; '),
   model: A.model, stage: A.stage,
   curious: [...picked].join('; '), win: A.win.trim(),
   tam: CFG.tam, tailoring: score() + '%'
  };
+ p.sid = sidOf(JSON.stringify(p));
+ return p;
 }
 function summary(){
  const d = payload(), L = [];
  L.push('PRE-SESSION SURVEY — ' + (d.org||'(organisation not given)'));
  if(d.client && d.client!==d.org) L.push('Portal prepared for: ' + d.client);
  L.push('Contact: ' + [(d.name||'—'), d.role].filter(Boolean).join(', '));
- L.push('Flagship event: ' + fmtn(d.ex) + ' exhibitors · ' + fmtn(d.at) + ' attendees · ' + d.days + ' show day' + (d.days>1?'s':''));
+ L.push('Flagship event: ' + (d.ex===''?'—':fmtn(d.ex)) + ' exhibitors · ' + (d.at===''?'—':fmtn(d.at)) + ' attendees · ' + (d.days===''?'—':d.days) + ' show day' + (d.days>1?'s':''));
  L.push('Monetised today: ' + (d.today||'—'));
  L.push('Digital share of revenue: ' + (d.share||'—'));
  L.push('Top goals: ' + (d.goals||'—'));
@@ -743,6 +769,11 @@ async function finish(){
 window.addEventListener('beforeunload', e=>{
  if(sending){ e.preventDefault(); e.returnValue = ''; }
 });
+window.addEventListener('pagehide', ()=>{
+ if(sending && navigator.sendBeacon){
+   try{ navigator.sendBeacon(CFG.sheet, new Blob([JSON.stringify(payload())], {type:'text/plain;charset=utf-8'})); }catch(e){}
+ }
+});
 function statusHtml(st){
  if(st==='wait') return `<div class="sendstat wait"><span class="spin"></span> Sending your answers…</div>
   <div class="keepopen wait" id="dynmsg">\u23f3 Please keep this page open \u2014 we\u2019re delivering your answers to the ExpoPlatform team\u2026</div>`;
@@ -760,7 +791,7 @@ function renderDone(st){
   <div class="donebox">
    <div class="big">🎯</div>
    <h3>That\u2019s everything we need${d.name?', '+esc(d.name.split(' ')[0]):''}.</h3>
-   <p>Your session is now being tailored${d.org?' for <b>'+esc(d.org)+'</b>':''} — ${picked.size ? '<b>'+picked.size+' streams flagged</b> for a deeper dive, and ' : ''}your benchmarks will be modelled at ${fmtn(d.ex)} exhibitors and ${fmtn(d.at)} attendees.</p>
+   <p>Your session is now being tailored${d.org?' for <b>'+esc(d.org)+'</b>':''} — ${picked.size ? '<b>'+picked.size+' streams flagged</b> for a deeper dive, and ' : ''}your benchmarks will be modelled at ${d.ex===''?'your':fmtn(d.ex)} exhibitors and ${d.at===''?'your':fmtn(d.at)} attendees.</p>
    ${statusHtml(st)}
    <div class="sumbox">${esc(summary())}</div>
    <div class="donebtns">
